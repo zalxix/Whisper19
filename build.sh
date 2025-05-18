@@ -4,7 +4,7 @@
 mkdir -p public
 
 # Copy core files to public directory
-cp -r index.html app.js styles.css manifest.json sw.js public/
+cp -r index.html app.js styles.css manifest.json sw.js recover.js public/
 
 # Create icon directory if it doesn't exist
 mkdir -p icons
@@ -41,9 +41,53 @@ if grep -q "manifest.json" package.json; then
   echo "package.json already updated to include PWA assets"
 else
   echo "Updating package.json build script to include PWA assets..."
-  sed -i.bak 's/"build": "mkdir -p public && cp -r index.html app.js styles.css public\/"/"build": "mkdir -p public \&\& cp -r index.html app.js styles.css manifest.json sw.js public\/ \&\& bash build.sh"/' package.json
+  sed -i.bak 's/"build": "mkdir -p public && cp -r index.html app.js styles.css public\/"/"build": "mkdir -p public \&\& cp -r index.html app.js styles.css manifest.json sw.js recover.js public\/ \&\& bash build.sh"/' package.json
   rm package.json.bak
 fi
+
+# Create recovery shortcut HTML file
+cat > public/recover.html << 'EOL'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech-to-Text App Recovery</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #3b82f6;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        p {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Speech-to-Text App Recovery</h1>
+    <p>If you're experiencing a blank page when using the app, this recovery page can help fix the issue.</p>
+    <p>Click the button below to run the recovery tool.</p>
+    <button onclick="window.location.href='/recover.js?fix=true'">Run Recovery Tool</button>
+    <p><small>This will clear service worker caches and unregister any problematic service workers.</small></p>
+</body>
+</html>
+EOL
 
 # Done
 echo "Build completed. PWA assets prepared in public/ directory."
