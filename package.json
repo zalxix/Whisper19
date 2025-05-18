@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "npx serve",
-    "build": "echo 'Static site, no build required'"
+    "start": "npx serve public",
+    "build": "mkdir -p public && cp -r index.html app.js styles.css public/"
   },
   "dependencies": {
     "serve": "^14.2.1"
