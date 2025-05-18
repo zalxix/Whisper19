@@ -11,6 +11,10 @@ cp -f app.js public/
 cp -f styles.css public/
 cp -f manifest.json public/
 cp -f sw.js public/
+cp -f recover.html public/
+cp -f emergency.html public/
+cp -f bypass.html public/
+cp -f RECOVERY-GUIDE.md public/recovery.md
 
 # Copy icons to public directory
 echo "Copying icons..."

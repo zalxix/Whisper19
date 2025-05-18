@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Loader - Whisper App</title>
+    <!-- Correct CSP that allows CDN resources -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.tailwindcss.com; connect-src 'self' https://api.openai.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; img-src 'self' data:; manifest-src 'self';">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9fafb;
+            color: #111827;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .loading {
+            margin: 40px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .status {
+            margin: 10px 0;
+            font-size: 14px;
+            color: #6b7280;
+        }
+        .error {
+            background-color: #fee2e2;
+            border-left: 4px solid #ef4444;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            display: none;
+        }
+        .buttons {
+            margin: 20px 0;
+        }
+        button {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #2563eb;
+        }
+        .success {
+            background-color: #dcfce7;
+            border-left: 4px solid #22c55e;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            display: none;
+        }
+        .header {
+            margin-bottom: 30px;
+        }
+        h1 {
+            color: #3b82f6;
+            margin-bottom: 10px;
+        }
+        .resource-list {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        .resource-list li {
+            padding: 5px 0;
+            display: flex;
+            align-items: center;
+        }
+        .resource-list li:before {
+            content: "•";
+            color: #9ca3af;
+            margin-right: 10px;
+        }
+        .resource-list li.loaded:before {
+            content: "✓";
+            color: #22c55e;
+        }
+        .resource-list li.failed:before {
+            content: "✗";
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Whisper Transcription App</h1>
+            <p>Emergency Loader</p>
+        </div>
+        
+        <div class="loading">
+            <div class="spinner"></div>
+            <div class="status" id="status">Preparing emergency loader...</div>
+        </div>
+        
+        <ul class="resource-list" id="resourceList">
+            <li id="resource-1">React Library</li>
+            <li id="resource-2">ReactDOM Library</li>
+            <li id="resource-3">Babel Standalone</li>
+            <li id="resource-4">CryptoJS Library</li>
+            <li id="resource-5">Tailwind CSS</li>
+        </ul>
+        
+        <div class="error" id="errorMessage">
+            <p><strong>Error:</strong> <span id="errorText">Unable to load required resources.</span></p>
+        </div>
+        
+        <div class="success" id="successMessage">
+            <p><strong>Success!</strong> All resources loaded. Launching app...</p>
+        </div>
+        
+        <div class="buttons" id="buttons" style="display: none;">
+            <button id="retryBtn">Retry Loading</button>
+            <button id="recoverBtn">Go to Recovery Page</button>
+            <button id="continueBtn">Continue to App Anyway</button>
+        </div>
+    </div>
+    
+    <script>
+        // Store recovery flag in localStorage
+        localStorage.setItem('emergency_mode', 'true');
+        localStorage.setItem('csp_override', 'default-src \'self\'; script-src \'self\' \'unsafe-inline\' \'unsafe-eval\' https://unpkg.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; style-src \'self\' \'unsafe-inline\' https://unpkg.com https://cdn.tailwindcss.com; connect-src \'self\' https://api.openai.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; img-src \'self\' data:; manifest-src \'self\';');
+        
+        // Clear any service worker registrations
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for (let registration of registrations) {
+                    registration.unregister();
+                }
+                console.log('Unregistered all service workers');
+            });
+        }
+        
+        // Clear any caches
+        if ('caches' in window) {
+            caches.keys().then(cacheNames => {
+                cacheNames.forEach(cacheName => {
+                    caches.delete(cacheName);
+                });
+                console.log('Cleared all caches');
+            });
+        }
+        
+        // Resources to preload
+        const resources = [
+            { id: 'resource-1', type: 'script', url: 'https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js' },
+            { id: 'resource-2', type: 'script', url: 'https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js' },
+            { id: 'resource-3', type: 'script', url: 'https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js' },
+            { id: 'resource-4', type: 'script', url: 'https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js' },
+            { id: 'resource-5', type: 'script', url: 'https://cdn.tailwindcss.com' }
+        ];
+        
+        // Track loading state
+        let loadedCount = 0;
+        let failedCount = 0;
+        
+        // Update status message
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+            console.log(message);
+        }
+        
+        // Mark resource as loaded or failed
+        function markResource(id, status) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.classList.add(status);
+            }
+        }
+        
+        // Load a single resource
+        function loadResource(resource) {
+            return new Promise((resolve, reject) => {
+                updateStatus(`Loading ${resource.url}...`);
+                
+                if (resource.type === 'script') {
+                    const script = document.createElement('script');
+                    script.src = resource.url;
+                    script.async = true;
+                    
+                    script.onload = () => {
+                        loadedCount++;
+                        markResource(resource.id, 'loaded');
+                        resolve();
+                    };
+                    
+                    script.onerror = () => {
+                        failedCount++;
+                        markResource(resource.id, 'failed');
+                        reject(new Error(`Failed to load ${resource.url}`));
+                    };
+                    
+                    document.head.appendChild(script);
+                }
+            });
+        }
+        
+        // Load all resources
+        async function loadAllResources() {
+            updateStatus('Loading required resources...');
+            
+            const results = await Promise.allSettled(resources.map(loadResource));
+            
+            if (loadedCount === resources.length) {
+                // All resources loaded successfully
+                document.getElementById('successMessage').style.display = 'block';
+                updateStatus('All resources loaded successfully!');
+                
+                // Redirect to the main app after a brief delay
+                setTimeout(() => {
+                    window.location.href = '/?loaded=true&mode=emergency&t=' + Date.now();
+                }, 2000);
+                
+                return true;
+            } else {
+                // Some resources failed to load
+                document.getElementById('errorMessage').style.display = 'block';
+                document.getElementById('errorText').textContent = 
+                    `Loaded ${loadedCount}/${resources.length} resources. ${failedCount} failed.`;
+                document.getElementById('buttons').style.display = 'block';
+                
+                updateStatus('Some resources failed to load.');
+                return false;
+            }
+        }
+        
+        // Initialize buttons
+        document.getElementById('retryBtn').addEventListener('click', () => {
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('buttons').style.display = 'none';
+            loadAllResources();
+        });
+        
+        document.getElementById('recoverBtn').addEventListener('click', () => {
+            window.location.href = '/recover.html';
+        });
+        
+        document.getElementById('continueBtn').addEventListener('click', () => {
+            window.location.href = '/?bypass=true&partial=true&t=' + Date.now();
+        });
+        
+        // Start loading resources when the page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                loadAllResources();
+            }, 500);
+        });
+    </script>
+</body>
+</html> 

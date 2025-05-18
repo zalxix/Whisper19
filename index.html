@@ -3,6 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Emergency Recovery Script - DO NOT REMOVE -->
+    <script>
+    (function() {
+        // Check for emergency mode or CSP issues
+        const isEmergencyMode = window.location.search.includes('mode=emergency') || 
+                                localStorage.getItem('emergency_mode') === 'true';
+        const hasBypassParam = window.location.search.includes('bypass=true');
+        const hasRecoveryParam = window.location.search.includes('recovery=true');
+        
+        // Check if we're in recovery mode from previous attempts
+        const inRecoveryMode = isEmergencyMode || hasBypassParam || hasRecoveryParam || 
+                               localStorage.getItem('recovery_performed') === 'true';
+        
+        // Check if the correct CSP is applied
+        const correctCSP = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.tailwindcss.com; connect-src 'self' https://api.openai.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; img-src 'self' data:; manifest-src 'self';";
+        localStorage.setItem('csp_override', correctCSP);
+        
+        // Function to detect if we're experiencing CSP issues
+        function detectCSPIssues() {
+            // Check for CSP errors logged before
+            return localStorage.getItem('csp_errors') === 'true';
+        }
+        
+        // If we detect issues or are in recovery mode, take emergency action
+        if (inRecoveryMode || detectCSPIssues()) {
+            console.log('Emergency recovery mode activated');
+            
+            // Add CSP meta tag programmatically if needed
+            if (!document.querySelector('meta[http-equiv="Content-Security-Policy"]')) {
+                const cspMeta = document.createElement('meta');
+                cspMeta.httpEquiv = 'Content-Security-Policy';
+                cspMeta.content = correctCSP;
+                document.head.insertBefore(cspMeta, document.head.firstChild);
+                console.log('Injected CSP meta tag');
+            }
+            
+            // Prevent service worker registration
+            window.__bypassServiceWorker = true;
+            
+            // Log that we're in recovery mode
+            localStorage.setItem('in_recovery_mode', 'true');
+            
+            // Listen for errors related to CDN resources
+            window.addEventListener('error', function(e) {
+                if (e.target && (e.target.src || e.target.href)) {
+                    const url = e.target.src || e.target.href;
+                    if (url.includes('cdn.jsdelivr.net') || url.includes('cdn.tailwindcss.com')) {
+                        console.error('CDN resource failed to load:', url);
+                        localStorage.setItem('csp_errors', 'true');
+                        
+                        // If we're not already in emergency mode, redirect to emergency.html
+                        if (!isEmergencyMode && !document.getElementById('emergency-recovery-active')) {
+                            console.log('Redirecting to emergency loader');
+                            const marker = document.createElement('div');
+                            marker.id = 'emergency-recovery-active';
+                            marker.style.display = 'none';
+                            document.body.appendChild(marker);
+                            
+                            // Only redirect if this is the first time we're seeing issues
+                            if (!sessionStorage.getItem('redirected_to_emergency')) {
+                                sessionStorage.setItem('redirected_to_emergency', 'true');
+                                window.location.href = '/emergency.html';
+                            }
+                        }
+                    }
+                }
+            }, true);
+        }
+        
+        // Monitor for blank page
+        setTimeout(function() {
+            if (document.getElementById('root') && 
+                document.getElementById('root').children.length === 0 && 
+                document.readyState === 'complete') {
+                console.log('Detected blank page issue, activating recovery');
+                localStorage.setItem('blank_page_detected', 'true');
+                
+                // Only redirect if we haven't already redirected in this session
+                if (!sessionStorage.getItem('redirected_for_blank_page')) {
+                    sessionStorage.setItem('redirected_for_blank_page', 'true');
+                    window.location.href = '/emergency.html';
+                }
+            }
+        }, 3000);
+    })();
+    </script>
     <title>Whisper Transcription App</title>
     <!-- PWA Meta Tags -->
     <meta name="description" content="A speech-to-text transcription app using OpenAI's Whisper API">
@@ -245,14 +331,19 @@
     
     <!-- Register Service Worker -->
     <script>
-        if ('serviceWorker' in navigator) {
+        // Check if service worker should be bypassed
+        if (window.__bypassServiceWorker || 
+            localStorage.getItem('bypass_sw') === 'true' || 
+            window.location.search.includes('bypass=true')) {
+            console.log('Service Worker registration bypassed due to recovery mode');
+        } else if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 // First, clear cache storage to prevent stale resources
                 if ('caches' in window) {
                     caches.keys().then(cacheNames => {
                         console.log('Checking caches:', cacheNames);
                         // If we detect a version mismatch, clear all caches
-                        if (cacheNames.some(name => name !== 'speech-to-text-v3' && name.startsWith('speech-to-text'))) {
+                        if (cacheNames.some(name => name !== 'speech-to-text-v4' && name.startsWith('speech-to-text'))) {
                             console.log('Found old cache versions, clearing all caches');
                             return Promise.all(cacheNames.map(name => caches.delete(name)));
                         }

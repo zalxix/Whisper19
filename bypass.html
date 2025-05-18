@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bypassing - Whisper App</title>
+    <!-- Correct CSP -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.tailwindcss.com; connect-src 'self' https://api.openai.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; img-src 'self' data:; manifest-src 'self';">
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f3f4f6;
+            flex-direction: column;
+        }
+        .message {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 90%;
+            width: 500px;
+        }
+        h1 {
+            color: #3b82f6;
+            margin-top: 0;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border-left-color: #3b82f6;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .manual-link {
+            margin-top: 20px;
+        }
+        .manual-link a {
+            color: #3b82f6;
+            text-decoration: underline;
+            display: inline-block;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="message">
+        <h1>Bypassing Service Worker</h1>
+        <p>Clearing caches and service workers...</p>
+        <div class="spinner"></div>
+        <p>You will be redirected automatically in a few seconds.</p>
+        <div class="manual-link">
+            <p>If you're not redirected:</p>
+            <a href="/?mode=emergency&bypass=true&nocache=true&t=1">Click here to continue manually</a>
+        </div>
+    </div>
+    
+    <script>
+        // Store override in localStorage
+        localStorage.setItem('bypass_sw', 'true');
+        localStorage.setItem('emergency_mode', 'true');
+        localStorage.setItem('csp_override', 'default-src \'self\'; script-src \'self\' \'unsafe-inline\' \'unsafe-eval\' https://unpkg.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; style-src \'self\' \'unsafe-inline\' https://unpkg.com https://cdn.tailwindcss.com; connect-src \'self\' https://api.openai.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; img-src \'self\' data:; manifest-src \'self\';');
+        
+        // Unregister service workers
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for (let registration of registrations) {
+                    registration.unregister();
+                    console.log('Service worker unregistered');
+                }
+            }).catch(function(error) {
+                console.log('Service worker unregistration failed:', error);
+            });
+        }
+        
+        // Clear caches
+        if ('caches' in window) {
+            caches.keys().then(function(cacheNames) {
+                return Promise.all(
+                    cacheNames.map(function(cacheName) {
+                        return caches.delete(cacheName);
+                    })
+                );
+            }).then(function() {
+                console.log('Caches cleared');
+            }).catch(function(error) {
+                console.log('Cache clearing failed:', error);
+            });
+        }
+        
+        // Redirect after a short delay
+        setTimeout(function() {
+            window.location.href = '/?mode=emergency&bypass=true&nocache=true&t=' + Date.now();
+        }, 3000);
+    </script>
+</body>
+</html> 
