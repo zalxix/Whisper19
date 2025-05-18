@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "npx serve public",
-    "build": "mkdir -p public && cp -r index.html app.js styles.css manifest.json sw.js public/ && bash build.sh"
+    "build": "mkdir -p public && cp -r index.html app.js styles.css manifest.json sw.js recover.js public/ && bash build.sh"
   },
   "dependencies": {
     "serve": "^14.2.1"
