@@ -1,0 +1,15 @@
+{
+  "name": "whisper-transcription-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "npx serve",
+    "build": "echo 'Static site, no build required'"
+  },
+  "dependencies": {
+    "serve": "^14.2.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
