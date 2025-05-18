@@ -3,90 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Emergency Recovery Script - DO NOT REMOVE -->
+    <!-- Simplified Emergency Recovery Script -->
     <script>
     (function() {
-        // Check for emergency mode or CSP issues
+        // Simple emergency mode check
         const isEmergencyMode = window.location.search.includes('mode=emergency') || 
-                                localStorage.getItem('emergency_mode') === 'true';
-        const hasBypassParam = window.location.search.includes('bypass=true');
-        const hasRecoveryParam = window.location.search.includes('recovery=true');
+                                window.location.search.includes('bypass=true') ||
+                                window.location.search.includes('recovery=true');
         
-        // Check if we're in recovery mode from previous attempts
-        const inRecoveryMode = isEmergencyMode || hasBypassParam || hasRecoveryParam || 
-                               localStorage.getItem('recovery_performed') === 'true';
-        
-        // Check if the correct CSP is applied
-        const correctCSP = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.tailwindcss.com; connect-src 'self' https://api.openai.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; img-src 'self' data:; manifest-src 'self';";
-        localStorage.setItem('csp_override', correctCSP);
-        
-        // Function to detect if we're experiencing CSP issues
-        function detectCSPIssues() {
-            // Check for CSP errors logged before
-            return localStorage.getItem('csp_errors') === 'true';
+        // Only apply emergency measures if explicitly requested
+        if (isEmergencyMode) {
+            console.log('Emergency recovery mode activated via URL parameter');
+            
+            // Prevent service worker registration in emergency mode
+            window.bypassServiceWorker = true;
+            localStorage.setItem('bypass_sw', 'true');
+            
+            // Update CSP if needed
+            const correctCSP = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.tailwindcss.com; connect-src 'self' https://api.openai.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; img-src 'self' data:; manifest-src 'self';";
+            const cspMeta = document.createElement('meta');
+            cspMeta.httpEquiv = 'Content-Security-Policy';
+            cspMeta.content = correctCSP;
+            document.head.appendChild(cspMeta);
         }
         
-        // If we detect issues or are in recovery mode, take emergency action
-        if (inRecoveryMode || detectCSPIssues()) {
-            console.log('Emergency recovery mode activated');
-            
-            // Add CSP meta tag programmatically if needed
-            if (!document.querySelector('meta[http-equiv="Content-Security-Policy"]')) {
-                const cspMeta = document.createElement('meta');
-                cspMeta.httpEquiv = 'Content-Security-Policy';
-                cspMeta.content = correctCSP;
-                document.head.insertBefore(cspMeta, document.head.firstChild);
-                console.log('Injected CSP meta tag');
-            }
-            
-            // Prevent service worker registration
-            window.__bypassServiceWorker = true;
-            
-            // Log that we're in recovery mode
-            localStorage.setItem('in_recovery_mode', 'true');
-            
-            // Listen for errors related to CDN resources
-            window.addEventListener('error', function(e) {
-                if (e.target && (e.target.src || e.target.href)) {
-                    const url = e.target.src || e.target.href;
-                    if (url.includes('cdn.jsdelivr.net') || url.includes('cdn.tailwindcss.com')) {
-                        console.error('CDN resource failed to load:', url);
-                        localStorage.setItem('csp_errors', 'true');
-                        
-                        // If we're not already in emergency mode, redirect to emergency.html
-                        if (!isEmergencyMode && !document.getElementById('emergency-recovery-active')) {
-                            console.log('Redirecting to emergency loader');
-                            const marker = document.createElement('div');
-                            marker.id = 'emergency-recovery-active';
-                            marker.style.display = 'none';
-                            document.body.appendChild(marker);
-                            
-                            // Only redirect if this is the first time we're seeing issues
-                            if (!sessionStorage.getItem('redirected_to_emergency')) {
-                                sessionStorage.setItem('redirected_to_emergency', 'true');
-                                window.location.href = '/emergency.html';
-                            }
+        // Simple blank page detection (only triggers if root exists but is empty after load)
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const root = document.getElementById('root');
+                if (root && root.children.length === 0 && document.readyState === 'complete') {
+                    console.log('Detected blank page - showing recovery UI');
+                    
+                    // Create minimal recovery UI
+                    const recoveryDiv = document.createElement('div');
+                    recoveryDiv.style.position = 'fixed';
+                    recoveryDiv.style.top = '0';
+                    recoveryDiv.style.left = '0';
+                    recoveryDiv.style.width = '100%';
+                    recoveryDiv.style.height = '100%';
+                    recoveryDiv.style.backgroundColor = '#f8f9fa';
+                    recoveryDiv.style.display = 'flex';
+                    recoveryDiv.style.flexDirection = 'column';
+                    recoveryDiv.style.alignItems = 'center';
+                    recoveryDiv.style.justifyContent = 'center';
+                    recoveryDiv.style.zIndex = '9999';
+                    recoveryDiv.style.textAlign = 'center';
+                    recoveryDiv.style.padding = '20px';
+                    
+                    // Add recovery content
+                    recoveryDiv.innerHTML = `
+                        <h2 style="margin-bottom: 20px; color: #3b82f6;">Speech-to-Text App</h2>
+                        <p style="margin-bottom: 20px;">The app is having trouble loading. This might be due to cached resources.</p>
+                        <button id="recover-btn" style="background-color: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-bottom: 10px;">Recover App</button>
+                        <p style="font-size: 12px; margin-top: 20px;">If problems persist, try clearing your browser cache and cookies.</p>
+                    `;
+                    
+                    document.body.appendChild(recoveryDiv);
+                    
+                    // Add recovery button functionality
+                    document.getElementById('recover-btn').addEventListener('click', () => {
+                        // Clear caches
+                        if ('caches' in window) {
+                            caches.keys().then(cacheNames => {
+                                return Promise.all(cacheNames.map(name => caches.delete(name)));
+                            });
                         }
-                    }
+                        
+                        // Unregister service workers
+                        if ('serviceWorker' in navigator) {
+                            navigator.serviceWorker.getRegistrations().then(registrations => {
+                                return Promise.all(registrations.map(r => r.unregister()));
+                            }).then(() => {
+                                // Reload with bypass parameter
+                                window.location.href = '/?bypass=true';
+                            });
+                        } else {
+                            window.location.href = '/?bypass=true';
+                        }
+                    });
                 }
-            }, true);
-        }
-        
-        // Monitor for blank page
-        setTimeout(function() {
-            if (document.getElementById('root') && 
-                document.getElementById('root').children.length === 0 && 
-                document.readyState === 'complete') {
-                console.log('Detected blank page issue, activating recovery');
-                localStorage.setItem('blank_page_detected', 'true');
-                
-                // Only redirect if we haven't already redirected in this session
-                if (!sessionStorage.getItem('redirected_for_blank_page')) {
-                    sessionStorage.setItem('redirected_for_blank_page', 'true');
-                    window.location.href = '/emergency.html';
-                }
-            }
-        }, 3000);
+            }, 3000);
+        });
     })();
     </script>
     <title>Whisper Transcription App</title>
@@ -94,7 +91,7 @@
     <meta name="description" content="A speech-to-text transcription app using OpenAI's Whisper API">
     <meta name="theme-color" content="#3b82f6">
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon-192x192.png">
+    <link rel="apple-touch-icon" href="icon-192x192.html">
     <!-- Preload Critical Resources -->
     <link rel="preload" href="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" as="script" crossorigin>
     <link rel="preload" href="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" as="script" crossorigin>
@@ -103,50 +100,6 @@
     <link rel="preload" href="https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js" as="script" crossorigin>
     <!-- Content Security Policy -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.tailwindcss.com; connect-src 'self' https://api.openai.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; img-src 'self' data:; manifest-src 'self';">
-    <!-- Error recovery for blank page -->
-    <script>
-        // Detect if the page becomes blank or fails to load properly
-        window.addEventListener('DOMContentLoaded', () => {
-            // Mark that the DOM has loaded successfully
-            window.domLoaded = true;
-        });
-        // If page becomes unresponsive or blank, reload after 8 seconds
-        setTimeout(() => {
-            if (!window.domLoaded || document.getElementById('root').children.length === 0) {
-                console.error('Page appears to be blank or failed to load properly, reloading...');
-                // Clear any problematic service worker before reloading
-                if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.getRegistrations().then(registrations => {
-                        for (let registration of registrations) {
-                            registration.unregister();
-                        }
-                        // Force reload without cache
-                        window.location.reload(true);
-                    });
-                } else {
-                    window.location.reload(true);
-                }
-            }
-        }, 8000);
-        
-        // Monitor resource loading errors
-        window.addEventListener('error', (e) => {
-            if (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK') {
-                console.error('Failed to load resource:', e.target.src || e.target.href);
-                const errorDiv = document.createElement('div');
-                errorDiv.style.position = 'fixed';
-                errorDiv.style.top = '0';
-                errorDiv.style.left = '0';
-                errorDiv.style.right = '0';
-                errorDiv.style.background = '#f44336';
-                errorDiv.style.color = 'white';
-                errorDiv.style.padding = '10px';
-                errorDiv.style.textAlign = 'center';
-                errorDiv.textContent = 'Failed to load some resources. Please refresh the page.';
-                document.body.appendChild(errorDiv);
-            }
-        }, true);
-    </script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React and ReactDOM -->
@@ -160,170 +113,6 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body class="bg-gray-50 min-h-screen">
-    <!-- Enhanced Error Recovery for CSP/Blank Page Issues -->
-    <script>
-        // Track page load progress
-        window.pageLoadStatus = {
-            scriptCount: 0,
-            scriptsLoaded: 0,
-            domContentLoaded: false,
-            renderingStarted: false
-        };
-        
-        // Mark when DOM content is loaded
-        document.addEventListener('DOMContentLoaded', () => {
-            window.pageLoadStatus.domContentLoaded = true;
-            console.log('DOMContentLoaded event fired');
-            checkPageState();
-        });
-        
-        // Count scripts that should load
-        document.querySelectorAll('script').forEach(() => {
-            window.pageLoadStatus.scriptCount++;
-        });
-        
-        // Track script load events
-        document.addEventListener('load', (e) => {
-            if (e.target.tagName === 'SCRIPT') {
-                window.pageLoadStatus.scriptsLoaded++;
-                console.log(`Script loaded (${window.pageLoadStatus.scriptsLoaded}/${window.pageLoadStatus.scriptCount})`);
-            }
-        }, true);
-        
-        // Initial render check
-        let renderCheckInterval = setInterval(() => {
-            const root = document.getElementById('root');
-            if (root && root.children.length > 0) {
-                window.pageLoadStatus.renderingStarted = true;
-                console.log('Initial rendering detected');
-                clearInterval(renderCheckInterval);
-            }
-        }, 1000);
-        
-        // Check if the page is properly loaded or blank
-        function checkPageState() {
-            console.log('Page state check:', window.pageLoadStatus);
-            const root = document.getElementById('root');
-            
-            // If root exists but is empty after a reasonable time, handle recovery
-            if (root && root.children.length === 0 && window.pageLoadStatus.domContentLoaded) {
-                console.warn('Potential blank page detected - root element exists but has no children');
-                
-                if (!document.getElementById('blankpage-recovery')) {
-                    // Create recovery UI
-                    const recoveryDiv = document.createElement('div');
-                    recoveryDiv.id = 'blankpage-recovery';
-                    recoveryDiv.style.position = 'fixed';
-                    recoveryDiv.style.top = '0';
-                    recoveryDiv.style.left = '0';
-                    recoveryDiv.style.width = '100%';
-                    recoveryDiv.style.height = '100%';
-                    recoveryDiv.style.backgroundColor = '#f8f9fa';
-                    recoveryDiv.style.display = 'flex';
-                    recoveryDiv.style.flexDirection = 'column';
-                    recoveryDiv.style.alignItems = 'center';
-                    recoveryDiv.style.justifyContent = 'center';
-                    recoveryDiv.style.padding = '20px';
-                    recoveryDiv.style.zIndex = '9999';
-                    recoveryDiv.style.textAlign = 'center';
-                    
-                    const title = document.createElement('h2');
-                    title.textContent = 'Speech-to-Text App';
-                    title.style.marginBottom = '20px';
-                    title.style.color = '#3b82f6';
-                    
-                    const message = document.createElement('p');
-                    message.textContent = 'The app is having trouble loading. This might be due to cached resources.';
-                    message.style.marginBottom = '20px';
-                    
-                    const recoverButton = document.createElement('button');
-                    recoverButton.textContent = 'Recover App';
-                    recoverButton.style.backgroundColor = '#3b82f6';
-                    recoverButton.style.color = 'white';
-                    recoverButton.style.border = 'none';
-                    recoverButton.style.padding = '10px 20px';
-                    recoverButton.style.borderRadius = '5px';
-                    recoverButton.style.cursor = 'pointer';
-                    recoverButton.style.marginBottom = '10px';
-                    
-                    recoverButton.onclick = () => {
-                        // Clear caches and service worker
-                        if ('caches' in window) {
-                            caches.keys().then(cacheNames => {
-                                return Promise.all(cacheNames.map(name => caches.delete(name)));
-                            });
-                        }
-                        
-                        if ('serviceWorker' in navigator) {
-                            navigator.serviceWorker.getRegistrations().then(registrations => {
-                                return Promise.all(registrations.map(r => r.unregister()));
-                            }).then(() => {
-                                // Force reload without cache
-                                window.location.reload(true);
-                            });
-                        } else {
-                            // Force reload without cache
-                            window.location.reload(true);
-                        }
-                    };
-                    
-                    const clearCacheText = document.createElement('p');
-                    clearCacheText.innerHTML = '<small>If problems persist, try clearing your browser cache and cookies.</small>';
-                    clearCacheText.style.fontSize = '12px';
-                    clearCacheText.style.marginTop = '20px';
-                    
-                    // Assemble the recovery UI
-                    recoveryDiv.appendChild(title);
-                    recoveryDiv.appendChild(message);
-                    recoveryDiv.appendChild(recoverButton);
-                    recoveryDiv.appendChild(clearCacheText);
-                    
-                    // Add to the page
-                    document.body.appendChild(recoveryDiv);
-                    
-                    console.log('Recovery UI displayed - waiting for user action');
-                }
-            }
-        }
-        
-        // Detect CSP violations
-        window.addEventListener('securitypolicyviolation', (e) => {
-            console.error('CSP violation detected:', e.blockedURI, 'Directive:', e.violatedDirective);
-            // Add the violation to the page for debugging
-            const errorList = document.getElementById('csp-errors') || (() => {
-                const el = document.createElement('div');
-                el.id = 'csp-errors';
-                el.style.position = 'fixed';
-                el.style.bottom = '0';
-                el.style.left = '0';
-                el.style.right = '0';
-                el.style.background = '#ffeb3b';
-                el.style.color = 'black';
-                el.style.zIndex = '9999';
-                el.style.padding = '10px';
-                el.style.fontSize = '12px';
-                const title = document.createElement('h3');
-                title.textContent = 'CSP Violations (Developer Info)';
-                el.appendChild(title);
-                document.body.appendChild(el);
-                return el;
-            })();
-            
-            const item = document.createElement('div');
-            item.textContent = `Blocked: ${e.blockedURI} (${e.violatedDirective})`;
-            errorList.appendChild(item);
-        });
-        
-        // Final check after all resources should be loaded
-        window.addEventListener('load', () => {
-            console.log('Window load event fired');
-            setTimeout(checkPageState, 2000); // Check again 2 seconds after load
-        });
-        
-        // Periodic checks during page lifetime
-        setInterval(checkPageState, 5000);
-    </script>
-
     <div id="root" class="container mx-auto px-4 py-8 max-w-2xl"></div>
     
     <!-- Main app script -->
@@ -332,115 +121,20 @@
     <!-- Register Service Worker -->
     <script>
         // Check if service worker should be bypassed
-        if (window.__bypassServiceWorker || 
+        if (window.bypassServiceWorker || 
             localStorage.getItem('bypass_sw') === 'true' || 
             window.location.search.includes('bypass=true')) {
-            console.log('Service Worker registration bypassed due to recovery mode');
+            console.log('Service Worker registration bypassed');
         } else if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // First, clear cache storage to prevent stale resources
-                if ('caches' in window) {
-                    caches.keys().then(cacheNames => {
-                        console.log('Checking caches:', cacheNames);
-                        // If we detect a version mismatch, clear all caches
-                        if (cacheNames.some(name => name !== 'speech-to-text-v4' && name.startsWith('speech-to-text'))) {
-                            console.log('Found old cache versions, clearing all caches');
-                            return Promise.all(cacheNames.map(name => caches.delete(name)));
-                        }
-                    }).catch(err => console.error('Cache clearing failed:', err));
-                }
-                
-                // Check for existing service workers that might be causing issues
-                navigator.serviceWorker.getRegistrations().then(registrations => {
-                    // Log all active service workers for debugging
-                    console.log('Found', registrations.length, 'service worker registrations');
-                    
-                    // If we detect a problem with the service worker, unregister all
-                    const shouldUnregister = registrations.some(registration => {
-                        // For debugging
-                        console.log('SW state:', registration.active?.state, 'Controller:', !!navigator.serviceWorker.controller);
-                        
-                        // Check if we have a dead service worker (active but not controlling)
-                        if (registration.active && !navigator.serviceWorker.controller) {
-                            console.warn('Found inactive service worker, unregistering...');
-                            return true;
-                        }
-                        return false;
+                // Register the service worker with basic error handling
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.error('ServiceWorker registration failed:', error);
                     });
-                    
-                    if (shouldUnregister) {
-                        // Unregister all service workers to clean up
-                        console.log('Unregistering all service workers');
-                        return Promise.all(registrations.map(r => r.unregister()))
-                            .then(() => {
-                                console.log('Service workers unregistered, clearing caches');
-                                // Also clear all caches to ensure fresh start
-                                return caches.keys().then(names => 
-                                    Promise.all(names.map(name => caches.delete(name)))
-                                );
-                            })
-                            .then(() => {
-                                console.log('Reloading page after cleanup');
-                                window.location.reload(true);
-                            });
-                    }
-                    
-                    // Register the new service worker with robust error handling
-                    console.log('Registering service worker');
-                    return navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
-                        .then(registration => {
-                            console.log('ServiceWorker registration successful with scope:', registration.scope);
-                            
-                            // Handle service worker updates
-                            registration.addEventListener('updatefound', () => {
-                                const newWorker = registration.installing;
-                                console.log('Service worker update found, installing...');
-                                
-                                newWorker.addEventListener('statechange', () => {
-                                    console.log('Service worker state changed to:', newWorker.state);
-                                    
-                                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                        console.log('New service worker installed, reloading for clean update');
-                                        // Clear caches before reload to ensure fresh resources
-                                        caches.keys().then(names => 
-                                            Promise.all(names.map(name => {
-                                                console.log('Deleting cache:', name);
-                                                return caches.delete(name);
-                                            }))
-                                        ).then(() => {
-                                            window.location.reload(true);
-                                        });
-                                    }
-                                });
-                            });
-                        })
-                        .catch(error => {
-                            console.error('ServiceWorker registration failed:', error);
-                            // If service worker registration fails, continue without it
-                        });
-                }).catch(error => {
-                    console.error('Error checking service workers:', error);
-                });
-            });
-            
-            // Check for controller change (happens when a new service worker takes over)
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                console.log('Service worker controller changed, reloading...');
-                window.location.reload();
-            });
-            
-            // Add error event listener to detect service worker failures
-            window.addEventListener('error', function(event) {
-                if (event.filename && event.filename.includes('sw.js')) {
-                    console.error('Service worker script error detected:', event.message);
-                    // Unregister all service workers if the service worker script has errors
-                    navigator.serviceWorker.getRegistrations().then(registrations => {
-                        return Promise.all(registrations.map(r => r.unregister()));
-                    }).then(() => {
-                        console.log('Unregistered all service workers due to script error');
-                        window.location.reload(true);
-                    });
-                }
             });
         }
     </script>

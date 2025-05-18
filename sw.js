@@ -1,26 +1,22 @@
+// Version number that should change with each deployment
+const SW_VERSION = '1.0.1';
+console.log('Service Worker version:', SW_VERSION);
+
 // Include a version number in the cache name to enable cache invalidation on updates
-const CACHE_NAME = 'speech-to-text-v4';
+const CACHE_NAME = 'speech-to-text-v5';
 const URLS_TO_CACHE = [
   '/',
   '/index.html',
   '/app.js',
   '/styles.css',
   '/manifest.json',
-  '/icon-192x192.png',
-  '/icon-512x512.png'
-];
-
-// External CDN resources to cache separately with no-cors
-const CDN_RESOURCES = [
-  'https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js',
-  'https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js',
-  'https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js',
-  'https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js',
-  'https://cdn.tailwindcss.com'
+  '/icon-192x192.html',
+  '/icon-512x512.html'
 ];
 
 // Install event - cache local assets immediately
 self.addEventListener('install', (event) => {
+  console.log('Service Worker installing, version:', SW_VERSION);
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -31,36 +27,9 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Separate function to attempt to cache CDN resources
-function cacheCdnResources() {
-  return caches.open(CACHE_NAME)
-    .then(cache => {
-      // Process each CDN resource with error handling
-      return Promise.allSettled(
-        CDN_RESOURCES.map(url => 
-          fetch(url, { mode: 'no-cors' })
-            .then(response => {
-              // We can't check status for opaque responses, just cache it
-              if (response.type === 'opaque') {
-                return cache.put(url, response);
-              }
-              return cache.put(url, response);
-            })
-            .catch(err => {
-              console.warn(`Failed to cache ${url}:`, err);
-              // Continue despite errors
-            })
-        )
-      );
-    })
-    .catch(err => {
-      console.error('Error caching CDN resources:', err);
-      // Continue despite errors
-    });
-}
-
-// Try to cache CDN resources after activation
+// Clean up old caches
 self.addEventListener('activate', (event) => {
+  console.log('Service Worker activating, version:', SW_VERSION);
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
@@ -73,51 +42,28 @@ self.addEventListener('activate', (event) => {
             })
         );
       })
-      .then(() => {
-        console.log('Attempting to cache CDN resources');
-        return cacheCdnResources();
-      })
       .then(() => self.clients.claim())
   );
 });
 
-// Fetch event - different strategies for different types of requests
+// Simplified fetch handler: network-first strategy for navigation,
+// cache-first for static assets with network fallback
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+  // Skip cross-origin requests
+  if (!event.request.url.startsWith(self.location.origin)) {
+    return;
+  }
   
-  // Handle CDN requests
-  const isCdnRequest = CDN_RESOURCES.includes(event.request.url);
+  // Don't cache API requests
+  if (event.request.url.includes('api.openai.com')) {
+    return;
+  }
   
-  // Navigation requests (HTML pages)
+  // For navigation requests, try network first
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
         .catch(() => caches.match('/index.html'))
-    );
-    return;
-  }
-  
-  // For CDN resources, always try cache first
-  if (isCdnRequest) {
-    event.respondWith(
-      caches.match(event.request)
-        .then(cachedResponse => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          
-          // If not in cache, try to fetch it (but don't cache the result here)
-          // This avoids CSP issues during service worker execution
-          return fetch(event.request, { mode: 'no-cors' })
-            .catch(error => {
-              console.error('Failed to fetch CDN resource:', error);
-              // Return a simple empty response rather than crashing
-              return new Response('', { 
-                status: 408,
-                statusText: 'CDN Resource Unavailable'
-              });
-            });
-        })
     );
     return;
   }
@@ -140,25 +86,15 @@ self.addEventListener('fetch', (event) => {
             // Clone the response to cache it
             const responseToCache = networkResponse.clone();
             
-            // Don't cache API requests
-            if (!event.request.url.includes('api.openai.com')) {
-              caches.open(CACHE_NAME)
-                .then(cache => cache.put(event.request, responseToCache))
-                .catch(err => console.warn('Failed to cache response:', err));
-            }
+            caches.open(CACHE_NAME)
+              .then(cache => cache.put(event.request, responseToCache))
+              .catch(err => console.warn('Failed to cache response:', err));
             
             return networkResponse;
           })
           .catch(error => {
             console.error('Fetch failed:', error);
-            // Try to return something from cache as fallback
-            if (event.request.url.endsWith('.js')) {
-              return caches.match('/app.js');
-            } else if (event.request.url.endsWith('.css')) {
-              return caches.match('/styles.css');
-            }
-            // Let the error propagate if we can't provide a fallback
-            throw error;
+            throw error; // Let the error propagate
           });
       })
   );

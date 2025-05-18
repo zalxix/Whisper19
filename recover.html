@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recovery - Whisper Transcription App</title>
+    <!-- Add our own CSP that's guaranteed to work -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.tailwindcss.com; connect-src 'self' https://api.openai.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; img-src 'self' data:; manifest-src 'self';">
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #3b82f6;
+            margin-bottom: 20px;
+        }
+        .card {
+            background-color: #f9fafb;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin: 20px 0;
+        }
+        button {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+            font-weight: 500;
+        }
+        button:hover {
+            background-color: #2563eb;
+        }
+        .error {
+            background-color: #fee2e2;
+            border-left: 4px solid #ef4444;
+            padding: 10px 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .success {
+            background-color: #dcfce7;
+            border-left: 4px solid #22c55e;
+            padding: 10px 15px;
+            margin: 20px 0;
+            text-align: left;
+            display: none;
+        }
+        .steps {
+            text-align: left;
+            margin: 20px 0;
+        }
+        .steps ol {
+            padding-left: 20px;
+        }
+        code {
+            background-color: #f3f4f6;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .status {
+            margin-top: 10px;
+            font-style: italic;
+            color: #6b7280;
+        }
+        .method-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        .method-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .emergency-btn {
+            background-color: #ef4444;
+        }
+        .emergency-btn:hover {
+            background-color: #dc2626;
+        }
+        .checkbox-container {
+            margin: 10px 0;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>Whisper Transcription App Recovery</h1>
+    
+    <div class="card">
+        <h2>Fix Blank Page & Loading Issues</h2>
+        <div class="error">
+            <p><strong>Problem:</strong> The app shows a blank page after reload due to Content Security Policy (CSP) violations.</p>
+            <p><strong>Details:</strong> CDN resources from cdn.tailwindcss.com and cdn.jsdelivr.net are being blocked.</p>
+        </div>
+        
+        <div class="method-card">
+            <div class="method-title">Method 1: Standard Fix (Try this first)</div>
+            <p>Clear browser caches and unregister service workers:</p>
+            <button id="fixBtn">Fix & Reload App</button>
+            <div id="method1Status" class="status"></div>
+        </div>
+        
+        <div class="method-card">
+            <div class="method-title">Method 2: Emergency Bypass</div>
+            <p>This will attempt to bypass service workers and load the app directly:</p>
+            <div class="checkbox-container">
+                <input type="checkbox" id="bypassSW" checked>
+                <label for="bypassSW">Bypass Service Worker</label>
+            </div>
+            <div class="checkbox-container">
+                <input type="checkbox" id="forceCDN" checked>
+                <label for="forceCDN">Force Load CDN Resources</label>
+            </div>
+            <button id="emergencyBtn" class="emergency-btn">Emergency Bypass</button>
+            <div id="method2Status" class="status"></div>
+        </div>
+        
+        <div class="method-card">
+            <div class="method-title">Method 3: Direct App Access</div>
+            <p>Try loading the app directly from these links:</p>
+            <div style="margin: 10px 0;">
+                <a href="/?nocache=true&bypass=true" target="_blank">Open App (Bypass Cache)</a>
+            </div>
+            <div style="margin: 10px 0;">
+                <a href="/?mode=emergency&t=1" target="_blank">Open App (Emergency Mode)</a>
+            </div>
+        </div>
+        
+        <button id="advancedBtn">Advanced Options</button>
+        
+        <div id="advancedOptions" style="display: none; margin-top: 20px; text-align: left; background: #f3f4f6; padding: 15px; border-radius: 5px;">
+            <h4>Advanced Recovery Options:</h4>
+            <button id="clearCacheBtn">Clear Cache Only</button>
+            <button id="unregisterSWBtn">Unregister Service Workers Only</button>
+            <button id="hardReloadBtn">Force Hard Reload</button>
+            <button id="injectCDNBtn">Inject CDN Resources</button>
+            
+            <div class="status" id="statusOutput">
+                Ready for recovery actions.
+            </div>
+        </div>
+        
+        <div class="success" id="successMessage">
+            <p><strong>Success!</strong> Recovery actions completed. You will be redirected to the app shortly.</p>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3>Browser Console Errors</h3>
+        <p>If you're seeing errors like <code>Refused to connect to 'https://cdn.tailwindcss.com/' because it violates CSP</code>, the fix button should resolve them.</p>
+        <p>The app will be fixed permanently in the next deployment.</p>
+    </div>
+    
+    <script>
+        // Store CSP override in localStorage
+        localStorage.setItem('csp_override', 'default-src \'self\'; script-src \'self\' \'unsafe-inline\' \'unsafe-eval\' https://unpkg.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; style-src \'self\' \'unsafe-inline\' https://unpkg.com https://cdn.tailwindcss.com; connect-src \'self\' https://api.openai.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; img-src \'self\' data:; manifest-src \'self\';');
+        
+        // Main fix button
+        document.getElementById('fixBtn').addEventListener('click', async () => {
+            updateStatus('method1Status', 'Starting recovery process...');
+            await performFullRecovery();
+        });
+        
+        // Emergency bypass button
+        document.getElementById('emergencyBtn').addEventListener('click', async () => {
+            updateStatus('method2Status', 'Preparing emergency bypass...');
+            
+            // Store flags for the main page to use
+            localStorage.setItem('emergency_bypass', 'true');
+            localStorage.setItem('bypass_sw', document.getElementById('bypassSW').checked ? 'true' : 'false');
+            localStorage.setItem('force_cdn', document.getElementById('forceCDN').checked ? 'true' : 'false');
+            
+            try {
+                // If enabled, unregister service workers
+                if (document.getElementById('bypassSW').checked) {
+                    await unregisterServiceWorkers();
+                }
+                
+                // Clear session storage
+                sessionStorage.clear();
+                
+                // Force a hard reload with bypass parameters
+                updateStatus('method2Status', 'Bypass ready. Redirecting to app...');
+                setTimeout(() => {
+                    window.location.href = '/?mode=emergency&bypass=true&t=' + Date.now();
+                }, 1000);
+            } catch (error) {
+                updateStatus('method2Status', 'Error: ' + error.message);
+            }
+        });
+        
+        // Toggle advanced options
+        document.getElementById('advancedBtn').addEventListener('click', () => {
+            const advancedOptions = document.getElementById('advancedOptions');
+            advancedOptions.style.display = advancedOptions.style.display === 'none' ? 'block' : 'none';
+        });
+        
+        // Advanced buttons
+        document.getElementById('clearCacheBtn').addEventListener('click', async () => {
+            await clearCaches();
+        });
+        
+        document.getElementById('unregisterSWBtn').addEventListener('click', async () => {
+            await unregisterServiceWorkers();
+        });
+        
+        document.getElementById('hardReloadBtn').addEventListener('click', () => {
+            updateStatus('statusOutput', 'Forcing hard reload...');
+            setTimeout(() => {
+                window.location.href = '/?t=' + Date.now();
+            }, 1000);
+        });
+        
+        // Inject CDN resources directly
+        document.getElementById('injectCDNBtn').addEventListener('click', async () => {
+            await injectCDNResources();
+        });
+        
+        // Function to inject CDN resources directly
+        async function injectCDNResources() {
+            updateStatus('statusOutput', 'Manually injecting CDN resources...');
+            
+            const resources = [
+                { type: 'script', url: 'https://cdn.tailwindcss.com' },
+                { type: 'script', url: 'https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js' },
+                { type: 'script', url: 'https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js' },
+                { type: 'script', url: 'https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js' },
+                { type: 'script', url: 'https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js' }
+            ];
+            
+            // Create and append each resource
+            for (const resource of resources) {
+                try {
+                    if (resource.type === 'script') {
+                        const script = document.createElement('script');
+                        script.src = resource.url;
+                        script.async = true;
+                        
+                        // Create a promise to wait for the script to load
+                        await new Promise((resolve, reject) => {
+                            script.onload = resolve;
+                            script.onerror = reject;
+                            document.head.appendChild(script);
+                        });
+                        
+                        updateStatus('statusOutput', `Loaded ${resource.url}`);
+                    }
+                } catch (error) {
+                    updateStatus('statusOutput', `Failed to load ${resource.url}`);
+                }
+            }
+            
+            updateStatus('statusOutput', 'CDN resources injected. Ready to try the app again.');
+            
+            // Store successful injection in localStorage
+            localStorage.setItem('cdn_injected', 'true');
+        }
+        
+        // Full recovery procedure
+        async function performFullRecovery() {
+            try {
+                await clearCaches();
+                await unregisterServiceWorkers();
+                
+                // Store successful recovery in localStorage
+                localStorage.setItem('recovery_performed', 'true');
+                localStorage.setItem('last_recovery', Date.now().toString());
+                
+                // Show success message
+                document.getElementById('successMessage').style.display = 'block';
+                
+                // Redirect to main page after a short delay
+                updateStatus('method1Status', 'Recovery complete! Redirecting...');
+                setTimeout(() => {
+                    window.location.href = '/?recovery=true&t=' + Date.now();
+                }, 2000);
+            } catch (error) {
+                updateStatus('method1Status', 'Error during recovery: ' + error.message);
+                console.error('Recovery error:', error);
+            }
+        }
+        
+        // Clear all caches
+        async function clearCaches() {
+            updateStatus('statusOutput', 'Clearing browser caches...');
+            if ('caches' in window) {
+                try {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(cacheNames.map(cacheName => caches.delete(cacheName)));
+                    updateStatus('statusOutput', `Cleared ${cacheNames.length} cache(s)`);
+                    return true;
+                } catch (error) {
+                    updateStatus('statusOutput', 'Error clearing caches: ' + error.message);
+                    console.error('Cache clearing error:', error);
+                    return false;
+                }
+            } else {
+                updateStatus('statusOutput', 'Cache API not available in this browser');
+                return false;
+            }
+        }
+        
+        // Unregister service workers
+        async function unregisterServiceWorkers() {
+            updateStatus('statusOutput', 'Unregistering service workers...');
+            if ('serviceWorker' in navigator) {
+                try {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(registrations.map(reg => reg.unregister()));
+                    updateStatus('statusOutput', `Unregistered ${registrations.length} service worker(s)`);
+                    return true;
+                } catch (error) {
+                    updateStatus('statusOutput', 'Error unregistering service workers: ' + error.message);
+                    console.error('Service worker unregistration error:', error);
+                    return false;
+                }
+            } else {
+                updateStatus('statusOutput', 'Service Worker API not available in this browser');
+                return false;
+            }
+        }
+        
+        // Update status message
+        function updateStatus(elementId, message) {
+            console.log(message);
+            const statusOutput = document.getElementById(elementId);
+            if (statusOutput) {
+                statusOutput.textContent = message;
+            }
+        }
+    </script>
+</body>
+</html> 
