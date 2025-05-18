@@ -9,6 +9,50 @@
     <meta name="theme-color" content="#3b82f6">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192x192.png">
+    <!-- Error recovery for blank page -->
+    <script>
+        // Detect if the page becomes blank or fails to load properly
+        window.addEventListener('DOMContentLoaded', () => {
+            // Mark that the DOM has loaded successfully
+            window.domLoaded = true;
+        });
+        // If page becomes unresponsive or blank, reload after 8 seconds
+        setTimeout(() => {
+            if (!window.domLoaded || document.getElementById('root').children.length === 0) {
+                console.error('Page appears to be blank or failed to load properly, reloading...');
+                // Clear any problematic service worker before reloading
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistrations().then(registrations => {
+                        for (let registration of registrations) {
+                            registration.unregister();
+                        }
+                        // Force reload without cache
+                        window.location.reload(true);
+                    });
+                } else {
+                    window.location.reload(true);
+                }
+            }
+        }, 8000);
+        
+        // Monitor resource loading errors
+        window.addEventListener('error', (e) => {
+            if (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK') {
+                console.error('Failed to load resource:', e.target.src || e.target.href);
+                const errorDiv = document.createElement('div');
+                errorDiv.style.position = 'fixed';
+                errorDiv.style.top = '0';
+                errorDiv.style.left = '0';
+                errorDiv.style.right = '0';
+                errorDiv.style.background = '#f44336';
+                errorDiv.style.color = 'white';
+                errorDiv.style.padding = '10px';
+                errorDiv.style.textAlign = 'center';
+                errorDiv.textContent = 'Failed to load some resources. Please refresh the page.';
+                document.body.appendChild(errorDiv);
+            }
+        }, true);
+    </script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React and ReactDOM -->
@@ -31,15 +75,64 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(registration => {
-                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                    })
-                    .catch(error => {
-                        console.log('ServiceWorker registration failed: ', error);
+                // First, check for existing service workers that might be causing issues
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    // If we have a service worker with an old version, unregister it
+                    const shouldUnregister = registrations.some(registration => {
+                        // Check if we have the controlling service worker
+                        if (registration.active && !navigator.serviceWorker.controller) {
+                            console.warn('Found inactive service worker, unregistering...');
+                            return true;
+                        }
+                        return false;
                     });
+                    
+                    if (shouldUnregister) {
+                        // Unregister all service workers to clean up
+                        Promise.all(registrations.map(r => r.unregister()))
+                            .then(() => window.location.reload());
+                        return;
+                    }
+                    
+                    // Register the new service worker
+                    navigator.serviceWorker.register('/sw.js')
+                        .then(registration => {
+                            console.log('ServiceWorker registration successful with scope:', registration.scope);
+                            
+                            // Handle service worker updates
+                            registration.addEventListener('updatefound', () => {
+                                const newWorker = registration.installing;
+                                console.log('Service worker update found, installing...');
+                                
+                                newWorker.addEventListener('statechange', () => {
+                                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                        console.log('New service worker installed, reloading for clean update');
+                                        window.location.reload();
+                                    }
+                                });
+                            });
+                        })
+                        .catch(error => {
+                            console.error('ServiceWorker registration failed:', error);
+                            // If service worker registration fails, continue without it
+                        });
+                });
+            });
+            
+            // Check for controller change (happens when a new service worker takes over)
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                console.log('Service worker controller changed, reloading...');
+                window.location.reload();
             });
         }
     </script>
+    
+    <!-- Fallback for blank page -->
+    <noscript>
+        <div style="padding: 20px; text-align: center;">
+            <h1>JavaScript Required</h1>
+            <p>This app requires JavaScript to be enabled in your browser.</p>
+        </div>
+    </noscript>
 </body>
 </html> 
