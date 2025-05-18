@@ -1,15 +1,19 @@
 {
   "name": "whisper-transcription-app",
   "version": "1.0.0",
-  "private": true,
+  "description": "A speech-to-text transcription app using OpenAI's Whisper API",
+  "main": "app.js",
   "scripts": {
-    "start": "npx serve public",
-    "build": "mkdir -p public && cp -r index.html app.js styles.css manifest.json sw.js recover.js public/ && bash build.sh"
+    "start": "serve public",
+    "build": "bash build.sh",
+    "deploy": "bash deploy.sh",
+    "update-headers": "node update-headers.js",
+    "fix-csp": "node update-headers.js && vercel --prod"
   },
   "dependencies": {
-    "serve": "^14.2.1"
+    "serve": "^14.2.0"
   },
-  "engines": {
-    "node": ">=16.0.0"
+  "devDependencies": {
+    "vercel": "^32.0.0"
   }
 }
